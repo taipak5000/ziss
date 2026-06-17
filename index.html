@@ -165,6 +165,12 @@
             display: block;
         }
 
+        .pb-time {
+            font-size: 0.7rem;
+            color: #a6adc8;
+            display: block;
+        }
+
         /* 編集モード用のボタン類 */
         .edit-controls {
             display: flex;
@@ -367,6 +373,7 @@
                 // 自己ベストタイム（PB）の取得
                 const pbTime = pbRecords[idx] || null;
                 let pbDisplay = pbTime ? formatTime(pbTime) : "--:--.---";
+                let pbSpan = pbTime ? `<span class="pb-time">PB ${pbDisplay}</span>` : '';
 
                 // 計測データの生成
                 let currentDisp = "--:--.---";
@@ -411,6 +418,7 @@
                     ` : ''}
                     <div class="segment-times">
                         <div>${currentDisp}</div>
+                        ${pbSpan}
                         ${diffSpan}
                         ${effSpan}
                     </div>
@@ -579,6 +587,21 @@
         // 項目削除
         function deleteItem(index) {
             segments.splice(index, 1);
+
+            // 削除した項目のPBを取り除き、後ろの項目のPBをインデックスに合わせて詰める
+            const newPbRecords = {};
+            Object.keys(pbRecords).forEach(key => {
+                const k = parseInt(key, 10);
+                if (k < index) {
+                    newPbRecords[k] = pbRecords[key];
+                } else if (k > index) {
+                    newPbRecords[k - 1] = pbRecords[key];
+                }
+                // k === index の場合は削除された項目のPBなので破棄
+            });
+            pbRecords = newPbRecords;
+            localStorage.setItem(`sky_rta_pb_${currentMyset}`, JSON.stringify(pbRecords));
+
             renderSegments();
         }
 
@@ -589,6 +612,14 @@
             const temp = segments[index];
             segments[index] = segments[targetIndex];
             segments[targetIndex] = temp;
+
+            // segmentsの入れ替えと一緒にPBデータも入れ替える（PBが項目とズレないように）
+            const pbA = pbRecords[index];
+            const pbB = pbRecords[targetIndex];
+            if (pbB !== undefined) { pbRecords[index] = pbB; } else { delete pbRecords[index]; }
+            if (pbA !== undefined) { pbRecords[targetIndex] = pbA; } else { delete pbRecords[targetIndex]; }
+            localStorage.setItem(`sky_rta_pb_${currentMyset}`, JSON.stringify(pbRecords));
+
             renderSegments();
         }
 
